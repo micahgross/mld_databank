@@ -58,11 +58,11 @@ def generate_excel(db, db_rel):
     with pd.ExcelWriter(output) as writer:
         db.to_excel(writer,sheet_name='abs',index=False)
         db_rel.to_excel(writer,sheet_name='rel',index=False)
-        for col in db.columns:
-            col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
-            col_idx = db.columns.get_loc(col)
-            writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
-            writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
+        # for col in db.columns:
+        #     col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
+        #     col_idx = db.columns.get_loc(col)
+        #     writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
+        #     writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
         writer.save()
         processed_data = output.getvalue()
         
