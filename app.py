@@ -66,11 +66,11 @@ def generate_excel(db, db_rel):
     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
         db.to_excel(writer,sheet_name='abs',index=False)
         db_rel.to_excel(writer,sheet_name='rel',index=False)
-        # for col in db.columns:
-        #     col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
-        #     col_idx = db.columns.get_loc(col)
-        #     writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
-        #     writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
+        for col in db.columns:
+            col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
+            col_idx = db.columns.get_loc(col)
+            writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
+            writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
         writer.save()
         processed_data = output.getvalue()
         
@@ -89,10 +89,10 @@ def generate_excel_alt(db_alt):
     output = BytesIO()
     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
         db_alt.to_excel(writer, sheet_name='Sheet1' ,index=False)
-        # for col in db_alt.columns:
-        #     col_length = max(db_alt[col].astype(str).map(len).max(), len(col)) + 2
-        #     col_idx = db_alt.columns.get_loc(col)
-        #     writer.sheets['Sheet1'].set_column(col_idx, col_idx, col_length)
+        for col in db_alt.columns:
+            col_length = max(db_alt[col].astype(str).map(len).max(), len(col)) + 2
+            col_idx = db_alt.columns.get_loc(col)
+            writer.sheets['Sheet1'].set_column(col_idx, col_idx, col_length)
         writer.save()
         processed_data = output.getvalue()
         
@@ -145,6 +145,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 os.remove(os.path.join(path, f))
         with open(os.path.join(os.getcwd(), 'saved_variables','Options.json'), 'w') as fp:
             json.dump(Options, fp)
+#%%
     id_columns = get_id_columns()
     iso_columns = get_iso_columns()
     loadedjump_columns = get_loadedjump_columns()
@@ -163,7 +164,8 @@ if data_export_files is not None and len(data_export_files)>0:
         first_name, last_name, sex, birth_date, group, subgroup = list(df.iloc[0,:6])
         test_type, test_date, body_mass = list(df.iloc[1,6:9])
         test_date = datetime.date(year=int(test_date.split('.')[2]), month=int(test_date.split('.')[1]), day=int(test_date.split('.')[0]))
-        birth_date = datetime.date(year=int(birth_date.split('.')[2]), month=int(birth_date.split('.')[1]), day=int(birth_date.split('.')[0]))
+        if not np.isnan(birth_date):
+            birth_date = datetime.date(year=int(birth_date.split('.')[2]), month=int(birth_date.split('.')[1]), day=int(birth_date.split('.')[0]))
         idx = '_'.join([first_name, last_name, str(test_date)])
         db.loc[idx,'AthleteName'] = first_name+' '+last_name
         db.loc[idx,'BirthDate'] = birth_date
@@ -264,6 +266,7 @@ if data_export_files is not None and len(data_export_files)>0:
             db.insert(len(db.columns), col, np.nan)
             
     db = db[all_columns]
+#%%
     db_rel = db.copy()
     for par in ['Fmax_70', 'Fmax_100']:
         for col in db_rel.columns:
