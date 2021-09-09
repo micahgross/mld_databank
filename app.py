@@ -125,8 +125,8 @@ def retrieve_saved_variables():
     del fp, f, fh, file, file_list#, data_export_file_names
     return Options, data_export_files, data_export_file_names
 
-Options, data_export_files, data_export_file_names = retrieve_saved_variables()
-Options['save_variables'] = False
+# Options, data_export_files, data_export_file_names = retrieve_saved_variables()
+# Options['save_variables'] = False
 
 #%%
 st.write("""
@@ -136,7 +136,7 @@ st.write("""
 """)
 st.sidebar.header('Options')
 Options = {}
-Options['save_variables'] = True
+Options['save_variables'] = False
 Options['valid_only'] = st.sidebar.checkbox('valid trials only',
                                             value=True,
                                             )
