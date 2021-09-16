@@ -161,7 +161,7 @@ if data_export_files is not None and len(data_export_files)>0:
     bm_vertjump = {}
     bm_dropjump = {}
     db = pd.DataFrame()
-    for f_nr,f in enumerate(data_export_files):# f = data_export_files[0]
+    for f_nr,f in enumerate(data_export_files):# f_nr,f = 0,data_export_files[0]
         if Options['save_variables']:
             with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
                 fp.write(f.getbuffer())
@@ -259,13 +259,38 @@ if data_export_files is not None and len(data_export_files)>0:
                 db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# str(db.loc[idx,'TestType']) + ', ' + test_type
             execution_types = ['reaktiv']
             for j,jump in enumerate(['DJ']):# j,jump = 0,'DJ'
-                for par in ['s_max', 'tacc', 'Reak1', 'Reak2']:# par = 'Reak2'
-                    for dh in [str(x) for x in [20, 40, 60]]:# dh = str(20)
-                        db.loc[idx,'_'.join([jump,par,dh])] = df[
-                            ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
-                            ][
+                for par in ['Reak1', 'Reak2']:# par = 'Reak1'
+                    for dh in [str(int(x)) for x in df['Automatic (112)'].dropna().unique()]:# dh = str(20)
+                        if Options['alt_output']:
+                            db.loc[idx,'_'.join([jump,par,dh])] = df[
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ][
+                                    [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                                    ].max()
+                        else:
+                            db.loc[idx,'_'.join([jump,par,dh])] = df[
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ][
+                                    [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                                    ].mean()
+                for par in ['s_max', 'tacc']:# par = 's_max'
+                    for dh in [str(int(x)) for x in df['Automatic (112)'].dropna().unique()]:# dh = str(20)
+                        if Options['alt_output']:
+                            db.loc[idx,'_'.join([jump,par,dh])] = df[
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ][
+                                    [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                                    ].max()
+                        else:
+                            i = df[
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ][
+                                    'Reak1:smax/t [cm/s*10]'
+                                    ].idxmax()
+                            db.loc[idx,'_'.join([jump,par,dh])] = df.loc[
+                                i,
                                 [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
-                                ].mean()
+                                ]
                         
     for col in all_columns:
         if col not in db.columns:
@@ -296,24 +321,16 @@ if data_export_files is not None and len(data_export_files)>0:
                 'TestDate', 'AthleteName', 'BirthDate', 'BodyMass',
                 'CMJ_Pmax_0', 'SJ_Pmax_0', 'CMJ_Pmax_right', 'CMJ_Pmax_left', 'CMJ_Pmax_0_LR-imbalance',
                 'CMJ_s_max_0', 'SJ_s_max_0', 'CMJ_s_max_right', 'CMJ_s_max_left', 'CMJ_Pmax_0_bilateral_deficit', 'CMJ_s_max_0_effect_of_prestretch', 'CMJ_s_pos_0',
+                'DJ_Reak2_60', 'DJ_Reak1_60', 'DJ_s_max_60', 'DJ_tacc_60',
                 'Fmax_100_bilateral', 'Fmax_100_left', 'Fmax_100_right', 'Fmax_100_LR-imbalance', 'Fmax_100_bilateral_deficit',
                 'CMJ_Pmax_40', 'CMJ_s_max_40', 'CMJ_s_pos_40',
                 'SJ_Pmax_40', 'SJ_s_max_40', 'SJ_s_pos_40',
                 'DJ_Reak2_40', 'DJ_Reak1_40', 'DJ_s_max_40', 'DJ_tacc_40',
+                'DJ_Reak2_20', 'DJ_Reak1_20', 'DJ_s_max_20', 'DJ_tacc_20',
                 ]
             ]
         db_alt.insert(0, 'first_name', [str(db_alt.loc[i, 'AthleteName']).split(' ')[0] for i in db_alt.index])
         db_alt.insert(0, 'last_name', [str(db_alt.loc[i, 'AthleteName']).split(' ')[1] for i in db_alt.index])
-        for par in ['Reak2', 'Reak1',]:# 's_max', 'tacc'
-            db_alt.insert(
-                0, '_'.join(['DJ', par, 'best']),
-                db_rel[['_'.join(['DJ', par, str(drop_ht)]) for drop_ht in [20, 40, 60]]].max(axis=1)
-                )
-        for par in ['s_max', 'tacc']:
-            db_alt.insert(
-                0, '_'.join(['DJ', par, 'best']),
-                ''#db_rel[['_'.join(['DJ', par, str(drop_ht)]) for drop_ht in [20, 40, 60]]].max(axis=1)
-                )
         for side in ['bilateral', 'left', 'right']:
             db_alt.insert(0, 'Fmax_abs_100_'+side,
                           db['Fmax_100_'+side])
@@ -332,7 +349,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 'TestDate', 'last_name', 'first_name', 'Kader', 'Bemerkung', 'BirthDate', 'Groesse', 'BodyMass',
                 'CMJ_Pmax_0', 'SJ_Pmax_0', 'CMJ_Pmax_right', 'CMJ_Pmax_left', 'CMJ_Pmax_0_LR-imbalance',
                 'CMJ_s_max_0', 'SJ_s_max_0', 'CMJ_s_max_right', 'CMJ_s_max_left', 'CMJ_Pmax_0_bilateral_deficit', 'CMJ_s_max_0_effect_of_prestretch', 'CMJ_s_pos_0',
-                'DJ_Reak2_best', 'DJ_Reak1_best', 'DJ_s_max_best', 'DJ_tacc_best',
+                'DJ_Reak2_60', 'DJ_Reak1_60', 'DJ_s_max_60', 'DJ_tacc_60',
                 'Pmax_blank',
                 'Hupf', 'Laufsprung', 'Lateralsprung_l', 'Lateralsprung_r',
                 'Fmax_abs_100_bilateral', 'Fmax_100_bilateral', 'Fmax_abs_100_left', 'Fmax_100_left', 'Fmax_abs_100_right', 'Fmax_100_right',
@@ -343,6 +360,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 'SJ_Pmax_40', 'SJ_s_max_40', 'SJ_s_pos_40',
                 'Standweitsprung',
                 'DJ_Reak2_40', 'DJ_Reak1_40', 'DJ_s_max_40', 'DJ_tacc_40',
+                'DJ_Reak2_20', 'DJ_Reak1_20', 'DJ_s_max_20', 'DJ_tacc_20',
                 ]
             ]
         st.markdown(
