@@ -167,7 +167,8 @@ if data_export_files is not None and len(data_export_files)>0:
                 fp.write(f.getbuffer())
         f.seek(0)
         df = pd.read_csv(f, sep=';', encoding='cp1252')
-        first_name, last_name, sex, birth_date, group, subgroup = [str(x) for x in list(df.iloc[0,:6])]
+        first_name, last_name, sex, birth_date = list(df.iloc[0,:4])# [str(x) for x in list(df.iloc[0,:6])]
+        group, subgroup = [str(x) for x in list(df.iloc[0,4:6])]
         test_type, test_date, body_mass = list(df.iloc[1,6:9])
         test_date = datetime.date(year=int(test_date.split('.')[2]), month=int(test_date.split('.')[1]), day=int(test_date.split('.')[0]))
         if type(birth_date)==str:# which means the birth date is not missing
