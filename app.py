@@ -6,8 +6,8 @@ Created on Wed May  5 14:26:38 2021
 
 """
 # initiate app in Anaconda Navigator with
-# cd "C:\Users\BASPO\.spyder-py3\MLD_Databank"
-# streamlit run cyccess_databank_app.py
+# cd "C:\Users\User\.spyder-py3\Cyccess"
+# streamlit run cyccess_app.py
 
 import streamlit as st
 import pandas as pd
@@ -136,7 +136,7 @@ st.write("""
 """)
 st.sidebar.header('Options')
 Options = {}
-Options['save_variables'] = False
+Options = {'save_variables': False if '/app/' in os.getcwd() else True}
 Options['valid_only'] = st.sidebar.checkbox('valid trials only',
                                             value=True,
                                             )
@@ -165,13 +165,13 @@ if data_export_files is not None and len(data_export_files)>0:
         if Options['save_variables']:
             with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
                 fp.write(f.getbuffer())
+        f.seek(0)
         df = pd.read_csv(f, sep=';', encoding='cp1252')
-        first_name, last_name, sex, birth_date, group, subgroup = list(df.iloc[0,:6])
+        first_name, last_name, sex, birth_date, group, subgroup = [str(x) for x in list(df.iloc[0,:6])]
         test_type, test_date, body_mass = list(df.iloc[1,6:9])
         test_date = datetime.date(year=int(test_date.split('.')[2]), month=int(test_date.split('.')[1]), day=int(test_date.split('.')[0]))
         if type(birth_date)==str:# which means the birth date is not missing
             birth_date = datetime.date(year=int(birth_date.split('.')[2]), month=int(birth_date.split('.')[1]), day=int(birth_date.split('.')[0]))
-            
         idx = '_'.join([first_name, last_name, str(test_date)])
         db.loc[idx,'AthleteName'] = first_name+' '+last_name
         db.loc[idx,'BirthDate'] = birth_date
