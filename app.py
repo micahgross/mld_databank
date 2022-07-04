@@ -16,7 +16,7 @@ import os
 import json
 from io import BytesIO
 import base64
-import subprocess
+# import subprocess
 import datetime
 ##%%
 def get_id_columns():
@@ -167,6 +167,11 @@ if data_export_files is not None and len(data_export_files)>0:
                 fp.write(f.getbuffer())
         f.seek(0)
         df = pd.read_csv(f, sep=';', encoding='cp1252')
+        # if 'Nein' in list(df['Gültig']):
+        #     raise SystemExit()
+        if Options['valid_only']:
+            df = df[df['Gültig']!='Nein'].reset_index(drop=True)
+        
         first_name, last_name, sex, birth_date = list(df.iloc[0,:4])# [str(x) for x in list(df.iloc[0,:6])]
         group, subgroup = [str(x) for x in list(df.iloc[0,4:6])]
         test_type, test_date, body_mass = list(df.iloc[1,6:9])
@@ -192,10 +197,10 @@ if data_export_files is not None and len(data_export_files)>0:
                 db.loc[idx,'TestType'] = test_type
             else:
                 db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# ', '.join(sorted[str(db.loc[idx,'TestType']), test_type])# str(db.loc[idx,'TestType']) + ', ' + test_type
-            for ang in [70, 100]:
-                db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']!='einbeinig links') & (df['Ausführung']!='einbeinig rechts'))]['Fmax_iso [N]'].mean()
-                db.loc[idx,'_'.join(['Fmax', str(ang), 'left'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig links'))]['Fmax_iso [N]'].mean()
-                db.loc[idx,'_'.join(['Fmax', str(ang), 'right'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig rechts'))]['Fmax_iso [N]'].mean()
+            for ang in [70, 100]:# ang = 100
+                db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']!='einbeinig links') & (df['Ausführung']!='einbeinig rechts'))]['Fmax_iso [N]'].max()
+                db.loc[idx,'_'.join(['Fmax', str(ang), 'left'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig links'))]['Fmax_iso [N]'].max()
+                db.loc[idx,'_'.join(['Fmax', str(ang), 'right'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig rechts'))]['Fmax_iso [N]'].max()
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral_deficit'])] = 100*(1 - (db.loc[idx,'Fmax_'+str(ang)+'_bilateral'] / (db.loc[idx,'Fmax_'+str(ang)+'_left'] + db.loc[idx,'Fmax_'+str(ang)+'_right'])))# calculate bilateral deficit
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'LR-imbalance'])] = 100*(1-np.min([db.loc[idx,'Fmax_'+str(ang)+'_left'], db.loc[idx,'Fmax_'+str(ang)+'_right']])/np.max([db.loc[idx,'Fmax_'+str(ang)+'_left'], db.loc[idx,'Fmax_'+str(ang)+'_right']]))
 
@@ -210,7 +215,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
                     for ld in [str(x) for x in [0, 20, 40, 60, 80, 100]]:# ld=str(0)
                         db.loc[idx,'_'.join([jump,par,ld])] = df[
-                            ((df['Ausführung']==execution_types[j]) & (90+float(ld) < df['%KG [%]']) & (df['%KG [%]'] < float(ld)+110) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                            ((df['Ausführung']==execution_types[j]) & (90+float(ld) < df['%KG [%]']) & (df['%KG [%]'] < float(ld)+110))
                             ][
                                 [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
                                 ].mean()
@@ -229,7 +234,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
                     for s,side in enumerate(['0', 'left','right']):# s,side = 0,'0'
                         db.loc[idx,'_'.join([jump, par, side])] = df[
-                            ((df['Ausführung']==execution_types[s]) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                            ((df['Ausführung']==execution_types[s]))
                             ][
                                 [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
                                 ].mean()
@@ -243,7 +248,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
                     for ld in ['0']:
                         db.loc[idx,'_'.join([jump, par, ld])] = df[
-                            ((df['Ausführung']=='statodyn') & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                            ((df['Ausführung']=='statodyn'))
                             ][
                                 [col for col in df.columns if col.startswith(par)][0]
                                 ].mean()
@@ -264,34 +269,41 @@ if data_export_files is not None and len(data_export_files)>0:
                     for dh in [str(int(x)) for x in df['Automatic (112)'].dropna().unique()]:# dh = str(20)
                         if Options['alt_output']:
                             db.loc[idx,'_'.join([jump,par,dh])] = df[
-                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)))
                                 ][
                                     [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
                                     ].max()
                         else:
                             db.loc[idx,'_'.join([jump,par,dh])] = df[
-                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
+                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)))
                                 ][
                                     [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
-                                    ].mean()
+                                    ].max()
                 for par in ['s_max', 'tacc']:# par = 's_max'
                     for dh in [str(int(x)) for x in df['Automatic (112)'].dropna().unique()]:# dh = str(20)
-                        if Options['alt_output']:
-                            db.loc[idx,'_'.join([jump,par,dh])] = df[
-                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
-                                ][
-                                    [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
-                                    ].max()
-                        else:
-                            i = df[
-                                ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)) & (df['Gültig']=='Ja' if Options['valid_only'] else df['Gültig'].isin(['Ja', 'Nein'])))
-                                ][
-                                    'Reak1:smax/t [cm/s*10]'
-                                    ].idxmax()
-                            db.loc[idx,'_'.join([jump,par,dh])] = df.loc[
-                                i,
-                                [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
-                                ]
+                        # if Options['alt_output']:
+                        #     # db.loc[idx,'_'.join([jump,par,dh])] = df[
+                        #     #     ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)))
+                        #     #     ][
+                        #     #         [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                        #     #         ].max()
+                        #     db.loc[idx,'_'.join([jump,par,dh])] = df.loc[
+                        #         df[
+                        #             ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)))
+                        #             ][
+                        #                 [col for col in df.columns if col.startswith('Reak1') and 'rel' not in col][0]
+                        #                 ].idxmax(), [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                        #         ]
+                        # else:
+                        i = df[
+                            ((df['Ausführung']==execution_types[j]) & (df['Automatic (112)']==int(dh)))
+                            ][
+                                'Reak1:smax/t [cm/s*10]'
+                                ].idxmax()
+                        db.loc[idx,'_'.join([jump,par,dh])] = df.loc[
+                            i,
+                            [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                            ]
                         
     for col in all_columns:
         if col not in db.columns:
