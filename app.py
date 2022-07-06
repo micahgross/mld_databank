@@ -167,8 +167,6 @@ if data_export_files is not None and len(data_export_files)>0:
                 fp.write(f.getbuffer())
         f.seek(0)
         df = pd.read_csv(f, sep=';', encoding='cp1252')
-        # if 'Nein' in list(df['Gültig']):
-        #     raise SystemExit()
         if Options['valid_only']:
             df = df[df['Gültig']!='Nein'].reset_index(drop=True)
         
