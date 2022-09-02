@@ -199,7 +199,8 @@ if data_export_files is not None and len(data_export_files)>0:
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']!='einbeinig links') & (df['Ausführung']!='einbeinig rechts'))]['Fmax_iso [N]'].max()
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'left'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig links'))]['Fmax_iso [N]'].max()
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'right'])] = df[((df['Winkel_iso [°]']==ang) & (df['Ausführung']=='einbeinig rechts'))]['Fmax_iso [N]'].max()
-                db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral_deficit'])] = 100*(1 - (db.loc[idx,'Fmax_'+str(ang)+'_bilateral'] / (db.loc[idx,'Fmax_'+str(ang)+'_left'] + db.loc[idx,'Fmax_'+str(ang)+'_right'])))# calculate bilateral deficit
+                # db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral_deficit'])] = 100*(1 - (db.loc[idx,'Fmax_'+str(ang)+'_bilateral'] / (db.loc[idx,'Fmax_'+str(ang)+'_left'] + db.loc[idx,'Fmax_'+str(ang)+'_right'])))# calculate bilateral deficit
+                db.loc[idx,'_'.join(['Fmax', str(ang), 'bilateral_deficit'])] = 100*(((db.loc[idx,'Fmax_'+str(ang)+'_left'] + db.loc[idx,'Fmax_'+str(ang)+'_right']) / db.loc[idx,'Fmax_'+str(ang)+'_bilateral']) - 1)# calculate bilateral deficit
                 db.loc[idx,'_'.join(['Fmax', str(ang), 'LR-imbalance'])] = 100*(1-np.min([db.loc[idx,'Fmax_'+str(ang)+'_left'], db.loc[idx,'Fmax_'+str(ang)+'_right']])/np.max([db.loc[idx,'Fmax_'+str(ang)+'_left'], db.loc[idx,'Fmax_'+str(ang)+'_right']]))
 
         elif test_type == 'LoadedJump':
@@ -212,14 +213,16 @@ if data_export_files is not None and len(data_export_files)>0:
             for j,jump in enumerate(['CMJ', 'SJ']):# j,jump=0,'CMJ'
                 for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
                     for ld in [str(x) for x in [0, 20, 40, 60, 80, 100]]:# ld=str(0)
-                        db.loc[idx,'_'.join([jump,par,ld])] = df[
-                            ((df['Ausführung']==execution_types[j]) & (90+float(ld) < df['%KG [%]']) & (df['%KG [%]'] < float(ld)+110))
-                            ][
-                                [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
-                                ].mean()
+                        if '_'.join([jump,par,ld]) not in df.columns or np.isnan(db.loc[idx,'_'.join([jump,par,ld])]):# if there is already a value there from an 'Einzelsprung'
+                            db.loc[idx,'_'.join([jump,par,ld])] = df[
+                                ((df['Ausführung']==execution_types[j]) & (90+float(ld) < df['%KG [%]']) & (df['%KG [%]'] < float(ld)+110))
+                                ][
+                                    [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
+                                    ].mean()
             if not db.loc[idx][['_'.join([jump, 'Pmax_0']) for jump in ['CMJ','SJ']]].isna().any():
-                for par in ['Pmax', 's_max']:
-                    db.loc[idx, '_'.join(['CMJ', par, 'effect_of_prestretch'])] = 100*(db.loc[idx, '_'.join(['CMJ', par, '0'])] / db.loc[idx, '_'.join(['SJ', par, '0'])] - 1)
+                for par in ['Pmax', 's_max']:# par='Pmax'
+                    for ld in [str(x) for x in [0, 20, 40, 60, 80, 100]]:# ld=str(0)
+                        db.loc[idx, '_'.join(['CMJ', par, ld, 'effect_of_prestretch'])] = 100*(db.loc[idx, '_'.join(['CMJ', par, '0'])] / db.loc[idx, '_'.join(['SJ', par, '0'])] - 1)
          
         elif test_type == 'Einzelsprung':
             bm_vertjump[idx] = body_mass
@@ -236,9 +239,10 @@ if data_export_files is not None and len(data_export_files)>0:
                             ][
                                 [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
                                 ].mean()
-                if not db.loc[idx][['_'.join([jump,'Pmax',side]) for side in ['0', 'left','right']]].isna().any():
+                if not db.loc[idx][['_'.join([jump, 'Pmax', side]) for side in ['0', 'left', 'right']]].isna().any():
                     for par in ['Pmax', 's_max']:
-                        db.loc[idx, '_'.join([jump, par, '0_bilateral_deficit'])] = 100*(1 - (db.loc[idx,'_'.join([jump, par, '0'])] / (db.loc[idx,'_'.join([jump, par, 'left'])] + db.loc[idx,'_'.join([jump, par, 'right'])])))# calculate bilateral deficit
+                        # db.loc[idx, '_'.join([jump, par, '0_bilateral_deficit'])] = 100*(1 - (db.loc[idx,'_'.join([jump, par, '0'])] / (db.loc[idx,'_'.join([jump, par, 'left'])] + db.loc[idx,'_'.join([jump, par, 'right'])])))# calculate bilateral deficit
+                        db.loc[idx, '_'.join([jump, par, '0_bilateral_deficit'])] = 100*(((db.loc[idx,'_'.join([jump, par, 'left'])] + db.loc[idx,'_'.join([jump, par, 'right'])]) / db.loc[idx,'_'.join([jump, par, '0'])]) - 1)# calculate bilateral deficit
                 if not db.loc[idx][['_'.join([jump,'Pmax',side]) for side in ['left','right']]].isna().any():
                     for par in ['Pmax', 's_max']:
                         db.loc[idx, '_'.join([jump, par, '0_LR-imbalance'])] = 100*(1 - np.min([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]])/np.max([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]]))
