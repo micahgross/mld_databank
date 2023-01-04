@@ -33,7 +33,7 @@ def get_iso_columns(angles=[70, 100]):
 def get_loadedjump_columns(loads=[0, 20, 40, 60, 80, 100]):
     loadedjump_columns = []
     for jump in ['CMJ', 'SJ']:
-        for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:
+        for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:
             for ld in [str(x) for x in loads]:
                 loadedjump_columns.append('_'.join([jump, par, ld]))
     return loadedjump_columns
@@ -42,7 +42,7 @@ def get_singlejump_columns():
     singlejump_columns = []
     for jump in ['CMJ', 'SJ']:
         for side in ['0', 'left','right']:
-            for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:
+            for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:
                 singlejump_columns.append('_'.join([jump, par, side]))
     for par1 in ['effect_of_prestretch', 'bilateral_deficit', 'LR-imbalance']:
         for par2 in ['Pmax', 's_max']:
@@ -211,7 +211,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# str(db.loc[idx,'TestType']) + ', ' + test_type
             execution_types = ['elastodyn', 'statodyn']
             for j,jump in enumerate(['CMJ', 'SJ']):# j,jump=0,'CMJ'
-                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
+                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
                     for ld in [str(x) for x in [0, 20, 40, 60, 80, 100]]:# ld=str(0)
                         if '_'.join([jump,par,ld]) not in df.columns or np.isnan(db.loc[idx,'_'.join([jump,par,ld])]):# if there is already a value there from an 'Einzelsprung'
                             db.loc[idx,'_'.join([jump,par,ld])] = df[
@@ -232,7 +232,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# str(db.loc[idx,'TestType']) + ', ' + test_type
             execution_types = ['elastodyn', 'einbeinig links', 'einbeinig rechts']
             for jump in ['CMJ']:# jump='CMJ'
-                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
+                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
                     for s,side in enumerate(['0', 'left','right']):# s,side = 0,'0'
                         db.loc[idx,'_'.join([jump, par, side])] = df[
                             ((df['Ausführung']==execution_types[s]))
@@ -247,7 +247,7 @@ if data_export_files is not None and len(data_export_files)>0:
                     for par in ['Pmax', 's_max']:
                         db.loc[idx, '_'.join([jump, par, '0_LR-imbalance'])] = 100*(1 - np.min([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]])/np.max([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]]))
             for jump in ['SJ']:# jump='CMJ'
-                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'F1/3']:# par='Pmax'
+                for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
                     for ld in ['0']:
                         db.loc[idx,'_'.join([jump, par, ld])] = df[
                             ((df['Ausführung']=='statodyn'))
@@ -258,7 +258,7 @@ if data_export_files is not None and len(data_export_files)>0:
                 for par in ['Pmax', 's_max']:
                     db.loc[idx, '_'.join(['CMJ', par, '0_effect_of_prestretch'])] = 100*(db.loc[idx, '_'.join(['CMJ', par, '0'])] / db.loc[idx, '_'.join(['SJ', par, '0'])] - 1)
                 
-            # 'Pmax_CMJ_left', 'Pavg_CMJ_left', 'h_CMJ_left', 'load_CMJ_left', 'spos_CMJ_left', 'tpos_CMJ_left', 'Fmax_CMJ_left', 'vmax_CMJ_left', 'Fv0_CMJ_left', 'F1/3_CMJ_left', 'Pmax_CMJ_right', 'Pavg_CMJ_right', 'h_CMJ_right', 'load_CMJ_right', 'spos_CMJ_right', 'tpos_CMJ_right', 'Fmax_CMJ_right', 'vmax_CMJ_right', 'Fv0_CMJ_right', 'F1/3_CMJ_right'
+            # 'Pmax_CMJ_left', 'Pavg_CMJ_left', 'h_CMJ_left', 'load_CMJ_left', 'spos_CMJ_left', 'tpos_CMJ_left', 'Fmax_CMJ_left', 'vmax_CMJ_left', 'Fv0_CMJ_left', 'P1/3_CMJ_left', 'Pmax_CMJ_right', 'Pavg_CMJ_right', 'h_CMJ_right', 'load_CMJ_right', 'spos_CMJ_right', 'tpos_CMJ_right', 'Fmax_CMJ_right', 'vmax_CMJ_right', 'Fv0_CMJ_right', 'P1/3_CMJ_right'
         elif test_type == 'Drop Jump':
             bm_dropjump[idx] = body_mass
             if db.loc[idx,'TestType'] =='' or type(db.loc[idx,'TestType'])!=str:
@@ -321,7 +321,7 @@ if data_export_files is not None and len(data_export_files)>0:
                         db_rel.loc[i,col] = db.loc[i,col] / bm_iso[i]
                     except:
                         pass
-    for par in ['_Pmax_', '_Ppos_', '_Fmax_', '_Fv0_', '_F1/3_']:
+    for par in ['_Pmax_', '_Ppos_', '_Fmax_', '_Fv0_', '_P1/3_']:
         for col in db_rel.columns:
             if par in col and not any([p in col for p in ['effect_of_prestretch', 'bilateral_deficit', 'LR-imbalance']]):
                 for i in db_rel.index:
