@@ -136,7 +136,7 @@ st.write("""
 """)
 st.sidebar.header('Options')
 Options = {}
-Options = {'save_variables': False if '/app/' in os.getcwd() else True}
+Options = {'save_variables': False}# if '/app/' in os.getcwd() else True
 Options['valid_only'] = st.sidebar.checkbox('valid trials only',
                                             value=True,
                                             )
