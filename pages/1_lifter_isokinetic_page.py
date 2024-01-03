@@ -19,7 +19,8 @@ def generate_excel(csv_data):
     output = BytesIO()
     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
         csv_data.to_excel(writer,sheet_name='data',index=False)
-        writer.save()
+        # writer.save()
+        writer.close()
         processed_data = output.getvalue()
         
     b64 = base64.b64encode(processed_data)
