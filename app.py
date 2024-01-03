@@ -18,11 +18,6 @@ from io import BytesIO
 import base64
 # import subprocess
 import datetime
-
-st.set_page_config(
-    page_title="Cyccess",
-    #page_icon="👋",
-)
 ##%%
 def get_id_columns():
     id_columns = ['AthleteName', 'BirthDate', 'Group', 'Group_2', 'TestType', 'TestDate', 'TestYear', 'TestMonth', 'TestDay', 'BodyMass']
@@ -169,6 +164,7 @@ if data_export_files is not None and len(data_export_files)>0:
     bm_dropjump = {}
     db = pd.DataFrame()
     for f_nr,f in enumerate(data_export_files):# f_nr,f = 0,data_export_files[0]
+        print(f.name)
         if Options['save_variables']:
             with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
                 fp.write(f.getbuffer())
