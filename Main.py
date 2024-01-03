@@ -18,6 +18,11 @@ from io import BytesIO
 import base64
 # import subprocess
 import datetime
+st.set_page_config(
+    page_title="Main",
+    page_icon="👋",
+)
+
 ##%%
 def get_id_columns():
     id_columns = ['AthleteName', 'BirthDate', 'Group', 'Group_2', 'TestType', 'TestDate', 'TestYear', 'TestMonth', 'TestDay', 'BodyMass']
