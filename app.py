@@ -146,6 +146,7 @@ Options['alt_output'] = st.sidebar.checkbox('alternative output format',
                                             value=False,
                                             )
 data_export_files = st.file_uploader("upload csv export file", accept_multiple_files=True)
+current_file_container = st.empty()
 if data_export_files is not None and len(data_export_files)>0:
     if Options['save_variables']:
         for (path, _, files) in os.walk(os.path.join(os.getcwd(), 'saved_variables')):
@@ -164,7 +165,8 @@ if data_export_files is not None and len(data_export_files)>0:
     bm_dropjump = {}
     db = pd.DataFrame()
     for f_nr,f in enumerate(data_export_files):# f_nr,f = 0,data_export_files[0]
-        print(f.name)
+        with current_file_container:
+            st.write(f.name)
         if Options['save_variables']:
             with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
                 fp.write(f.getbuffer())
