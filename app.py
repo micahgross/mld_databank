@@ -79,7 +79,8 @@ def generate_excel(db, db_rel):
                 writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
         except:
             pass
-        writer.save()
+        # writer.save()
+        writer.close()
         processed_data = output.getvalue()
         
     b64 = base64.b64encode(processed_data)
