@@ -19,6 +19,10 @@ import base64
 # import subprocess
 import datetime
 
+st.set_page_config(
+    page_title="Cyccess",
+    #page_icon="👋",
+)
 ##%%
 def get_id_columns():
     id_columns = ['AthleteName', 'BirthDate', 'Group', 'Group_2', 'TestType', 'TestDate', 'TestYear', 'TestMonth', 'TestDay', 'BodyMass']
@@ -100,7 +104,8 @@ def generate_excel_alt(db_alt):
                 writer.sheets['Sheet1'].set_column(col_idx, col_idx, col_length)
         except:
             pass
-        writer.save()
+        # writer.save()
+        writer.close()
         processed_data = output.getvalue()
         
     b64 = base64.b64encode(processed_data)
