@@ -1,0 +1,249 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb  9 09:11:39 2024
+
+@author: micah
+"""
+import streamlit as st
+import pandas as pd
+import numpy as np
+# import os
+# import json
+from io import BytesIO
+import base64
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+from datetime import datetime
+#%%
+@st.cache_data#(experimental_allow_widgets=True)
+def get_iso_metrics(upload_file, exercises_by_position=None):
+    st.write(exercises_by_position)
+    df = pd.read_csv(upload_file, sep='\t', header=None)
+    df.columns = df.iloc[0]
+    date_idx = df[df.loc[:,'date']=='date'].index
+    timestamp_idx = df[df.iloc[:,0]=='Timestamp'].index
+    date = datetime.strptime(df.loc[date_idx.min()+1, 'date'], '%Y.%m.%d').date()
+    reps = {}
+    rep_nr = 0
+    last_rep_position = None
+    last_rep_exercise = None
+    for i in reversed(date_idx):# break# i = date_idx[-1]
+        # print(rep_nr+1, i)
+        rep_date = datetime.strptime(df.loc[i+1, 'date'], '%Y.%m.%d').date()
+        if rep_date == date:
+            rep_nr += 1
+            rep_time = datetime.strptime(df.loc[i+1, 'time'], '%H:%M:%S').time()
+            j = min([j for j in timestamp_idx if j>i])
+            info = {
+                par: float(df.loc[i+1, par]) for par in [col for col in df.columns if not any([x in col.lower() for x in ['date', 'time', 'athlet']])]
+                }
+            info['Athlet'] = df.loc[i+1, 'Athlet']
+            info['rep_date'] = str(rep_date)
+            info['rep_time'] = str(rep_time)
+            reps[rep_nr] = {**info}# {}
+            reps[rep_nr]['rep_datetime'] = str(
+                datetime.combine(rep_date, rep_time)
+                )
+            if exercises_by_position is not None and info['Position'] in exercises_by_position:
+                reps[rep_nr]['exercise'] = exercises_by_position[info['Position']]
+            elif exercises_by_position is not None and str(info['Position']) in exercises_by_position:
+                reps[rep_nr]['exercise'] = exercises_by_position[str(info['Position'])]
+            else:
+                if info['Position'] > 1000:#'press' in info['Athlet']:
+                    reps[rep_nr]['exercise'] = 'press'
+                elif info['Position'] < 950:#'pull' in info['Athlet']:
+                    reps[rep_nr]['exercise'] = 'pull'
+                else:
+                    reps[rep_nr]['exercise'] = None
+                # st.write(reps[rep_nr]['exercise'])
+                # # reps[rep_nr]['exercise'] = input('enter exercise (press or pull). Tip: '+ info['Position']+' : ')
+                # if info['Position'] == last_rep_position:
+                #     reps[rep_nr]['exercise'] = last_rep_exercise
+                # else:
+                #     with st.form('select exercise '+str(rep_nr)):
+                #         submit_press = st.form_submit_button('press')
+                #         submit_pull = st.form_submit_button('pull')
+                #     if submit_press:
+                #         last_rep_position = info['Position']
+                #         last_rep_exercise = 'press'
+                #         reps[rep_nr]['exercise'] = 'press'
+                #     if submit_pull:
+                #         last_rep_position = info['Position']
+                #         last_rep_exercise = 'pull'
+                #         reps[rep_nr]['exercise'] = 'pull'
+            # reps[rep_nr]['position'] = info['Position']
+            Ft = df.loc[j+1:].iloc[:,:4].rename(columns={col: df.loc[j,col] for col in df.iloc[:,:2]}).astype(float)# plt.plot(Ft['Timestamp'], Ft['Position'])
+            Ft.columns = list(Ft.columns[:2])+['Fa', 'Fb']
+            reps[rep_nr]['Ft'] = Ft
+            # st.write(Ft)
+            df = df.drop(df.loc[i:].index)
+    return reps
+
+@st.cache_data
+def filter_reps(reps, selected_reps):
+    reps_filtered = {}
+    for rep_nr in reps:
+        for exercise in selected_reps:
+            if rep_nr in selected_reps[exercise]:
+                if selected_reps[exercise][rep_nr]:# == True
+                    reps_filtered[rep_nr] = reps[rep_nr].copy()
+    return reps_filtered
+
+def generate_excel(df, download_filename, sheet_name, link_text = 'Download Excel'):
+    # thanks to https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806/12
+    output = BytesIO()
+    with pd.ExcelWriter(output) as writer:#, date_format='dd.mm.yyyy'
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+        writer.close()
+        processed_data = output.getvalue()
+        
+    b64 = base64.b64encode(processed_data)
+    link_text = 'Download Excel'
+    if not download_filename.endswith('.xlsx'):
+        download_filename = download_filename+'.xlsx'
+    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">{link_text}</a>' # decode b'abc' => abc
+
+def correct_exercises(reps, exercises_by_position):
+    for rep_nr in reps:
+        if 'exercise' not in reps[rep_nr] or reps[rep_nr]['exercise'] is None:
+            try:
+                reps[rep_nr]['exercise'] = exercises_by_position[
+                    reps[rep_nr]['Position']
+                    ]
+            except:
+                reps[rep_nr]['exercise'] = exercises_by_position[
+                    str(reps[rep_nr]['Position'])
+                    ]
+    return reps
+
+#%%
+st.set_page_config(layout="wide")
+if 'exercises_by_position' not in st.session_state:
+    st.session_state.exercises_by_position = None
+st.write("""
+
+# Web App Upper Body Test on Lifter (isometric)
+
+""")
+st.sidebar.write('')
+
+cols = st.columns(2)
+with cols[0]:
+    upload_file = st.file_uploader(
+        "upload .isom or .csv file",
+        type=['csv', 'isom'],
+        accept_multiple_files=False,
+        )
+if upload_file is not None:
+    # upload_file = "E:\\camille_iso_26.1.isom"
+    st.write(upload_file.name)
+    if 'reps' not in st.session_state:
+        reps = get_iso_metrics(upload_file, st.session_state.exercises_by_position)
+        different_positions = list(set([
+            reps[rep_nr]['Position'] for rep_nr in reps# if 'exercise' not in reps[rep_nr]
+            ]))
+        st.session_state.reps = {**reps}
+        st.session_state.exercises_by_position = {
+            position: list(set([
+                reps[rep_nr]['exercise'] if 'exercise' in reps[rep_nr] and reps[rep_nr]['Position']==position else None for rep_nr in reps
+                ]))[0] for position in different_positions
+            }
+    # st.write(st.session_state.reps)
+    # with st.form('define exercises'):
+    #     different_positions = list(st.session_state.exercises_by_position.keys())
+    #     cols = st.columns(max([5, len(different_positions)]))
+    #     exercises_by_position = {}
+    #     for p,pos in enumerate(different_positions):
+    #         with cols[p]:
+    #             st.write('position: '+str(pos))
+    #             exercises_by_position[pos] = st.selectbox('exercise', ['press','pull'])
+    #     submit_exercises = st.form_submit_button('confirm')
+    # if submit_exercises:
+    #     st.session_state.exercises_by_position = {**exercises_by_position}
+    #     reps = get_iso_metrics(upload_file, st.session_state.exercises_by_position)#correct_exercises(reps, exercises_by_position)
+    #     st.session_state.reps = {**reps}
+    # st.write(st.session_state.reps)
+    if not any([st.session_state.reps[rep_nr]['exercise'] is None for rep_nr in st.session_state.reps]):
+        reps = {**st.session_state.reps}
+        # st.write([st.session_state.reps[rep_nr]['exercise'] for rep_nr in st.session_state.reps])
+        # # cols = st.columns(len(list(set([reps[rep_nr]['exercise'] for rep_nr in reps]))))
+        # for i,exercise in enumerate(list(set([reps[rep_nr]['exercise'] for rep_nr in reps]))):
+        #     # with cols[i].expander(exercise):
+        #     with st.expander(exercise, expanded=True):
+        #         st.subheader(exercise)
+        #         # cols = st.columns(len([rep_nr for rep_nr in reps if reps[rep_nr]['exercise'] == exercise]))
+        #         # for i,rep_nr in enumerate([rep_nr for rep_nr in reps if reps[rep_nr]['exercise'] == exercise]):
+        #         #     with cols[i]:
+        #         #         fig = px.line(
+        #         #             data_frame=reps[rep_nr]['Ft'],
+        #         #             x='Timestamp', y='Fb',#['Fa', 'Fb'],
+        #         #             # color='orange'
+        #         #             )
+        #         #         fig.update_layout(width=500, height=500)
+        #         #         st.write('rep ', rep_nr)
+        #         #         st.plotly_chart(fig)#, width=10, height=10)
+        #                     # st.write(reps[rep_nr]['Ft']['Fa'].max(), reps[rep_nr]['Ft']['Fb'].max())
+        # # st.write(reps[rep_nr])
+        # st.write(st.session_state.reps.keys())
+        
+        if 'reps_filtered' not in st.session_state:
+            st.session_state.reps_filtered = {**st.session_state.reps}# reps_filtered = {**reps}
+        with st.form('selected reps'):
+            st.write('select / de-select reps')
+            selected_reps = {}
+            for i,exercise in enumerate(list(set([reps[rep_nr]['exercise'] for rep_nr in reps]))):
+                st.divider()
+                st.subheader(exercise)
+                rep_nrs = sorted([rep_nr for rep_nr in reps if reps[rep_nr]['exercise']==exercise])
+                cols = st.columns(len(rep_nrs))
+                for i,rep_nr in enumerate([rep_nr for rep_nr in reps if reps[rep_nr]['exercise'] == exercise]):
+                    with cols[i]:
+                        fig = px.line(
+                            data_frame=reps[rep_nr]['Ft'],
+                            x='Timestamp', y='Fb',#['Fa', 'Fb'],
+                            # color='orange'
+                            )
+                        fig.update_layout(width=500, height=500)
+                        st.write('rep ', rep_nr)
+                        st.plotly_chart(fig)#, width=10, height=10)
+                        st.write('Fmax: '+str(round(reps[rep_nr]['Ft']['Fb'].max()))+' N')
+                
+                    # rep_loads = [reps[rep_nr]['Load'] for rep_nr in reps if reps[rep_nr]['exercise']==exercise]
+                    # loads = sorted(list(set(rep_loads)))
+                    # subcols = st.columns(len(loads))
+                selected_reps[exercise] = {
+                    rep_nr: cols[i].checkbox('rep_'+str(rep_nr), True, key='rep_'+str(rep_nr)) for i,rep_nr in enumerate(rep_nrs)
+                    }
+            # st.columns(1)
+            submit_rep_selection = st.form_submit_button('confirm rep selection')
+        if submit_rep_selection:
+            st.session_state.selected_reps = selected_reps
+            st.session_state.reps_filtered = filter_reps(st.session_state.reps, st.session_state.selected_reps)
+            # st.session_state.reps_filtered = filter_reps(reps, selected_reps)
+        # else:
+        #     st.session_state.selected_reps = {exercise: {rep_nr: True for rep_nr in sorted([rep_nr for rep_nr in reps if reps[rep_nr]['exercise']==exercise])} for exercise in list(set([reps[rep_nr]['exercise'] for rep_nr in reps]))}
+    
+        st.header('results')
+        data_frame = pd.DataFrame(
+            {
+                'rep nr': [rep_nr for rep_nr in st.session_state.reps_filtered],
+                'date': [reps[rep_nr]['rep_date'] for rep_nr in st.session_state.reps_filtered],
+                'time': [reps[rep_nr]['rep_time'] for rep_nr in st.session_state.reps_filtered],
+                'position': [reps[rep_nr]['Position'] for rep_nr in st.session_state.reps_filtered],
+                'exercise': [reps[rep_nr]['exercise'] for rep_nr in st.session_state.reps_filtered],
+                'F_max (N)': [reps[rep_nr]['Max Force N'] for rep_nr in st.session_state.reps_filtered],
+                },
+            index=range(len([rep_nr for rep_nr in st.session_state.reps_filtered]))
+            )
+        st.write(data_frame)
+        
+        cols = st.columns((0.2,0.8))
+        athlete_name = cols[0].text_input('athlete name', key='athlete_name')
+        with cols[1]:
+            st.write(upload_file.name)
+            st.markdown(
+                generate_excel(data_frame, ''.join([name.capitalize() for name in reversed(st.session_state.athlete_name.split(' '))])+'_'+reps[list(reps.keys())[0]]['rep_date']+'_iso', 'iso'),
+                unsafe_allow_html=True
+                )#, sign_digits=3
+    
