@@ -6,8 +6,8 @@ Created on Wed May  5 14:26:38 2021
 
 """
 # initiate app in Anaconda Navigator with
-# cd "C:\Users\User\.spyder-py3\Cyccess"
-# streamlit run cyccess_app.py
+# cd "C:\Users\user\OneDrive\python_scripts\Streamlit\Cyccess"
+# streamlit run app.py
 
 import streamlit as st
 import pandas as pd
@@ -33,7 +33,7 @@ def get_iso_columns(angles=[70, 100]):
 def get_loadedjump_columns(loads=[0, 20, 40, 60, 80, 100]):
     loadedjump_columns = []
     for jump in ['CMJ', 'SJ']:
-        for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:
+        for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3', 'Fpos', 't_Fmax', 'tacc', 'tneg']:
             for ld in [str(x) for x in loads]:
                 loadedjump_columns.append('_'.join([jump, par, ld]))
     return loadedjump_columns
@@ -42,7 +42,7 @@ def get_singlejump_columns():
     singlejump_columns = []
     for jump in ['CMJ', 'SJ']:
         for side in ['0', 'left','right']:
-            for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:
+            for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3', 'Fpos', 't_Fmax', 'tacc', 'tneg']:
                 singlejump_columns.append('_'.join([jump, par, side]))
     for par1 in ['effect_of_prestretch', 'bilateral_deficit', 'LR-imbalance']:
         for par2 in ['Pmax', 's_max']:
@@ -52,28 +52,32 @@ def get_singlejump_columns():
 def get_dropjump_columns(drop_heights=[20, 40, 60]):
     dropjump_columns = []
     for jump in ['DJ']:# jump = 'DJ'
-        for par in ['s_max', 'tacc', 'Reak1', 'Reak2']:# par = 'Reak2'
+        for par in ['s_max', 'tacc', 'Reak1', 'Reak2', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'Fpos', 't_Fmax', 'tacc', 'tneg']:# par = 'Reak2'
             for dh in [str(x) for x in drop_heights]:# dh = str(20)
                 dropjump_columns.append('_'.join([jump, par, dh]))
     return dropjump_columns
     
 ##%%
-def generate_excel(db, db_rel):
+def generate_excel(**kwargs):
+    sheet_name_map = {'db': 'abs', 'db_rel': 'rel', 'db_alt': 'Sheet1'}
     # thanks to https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806/12
     writing_excel_container = st.empty()
     writing_excel_container.text('writing to excel')
     output = BytesIO()
     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
-        db.to_excel(writer,sheet_name='abs',index=False)
-        db_rel.to_excel(writer,sheet_name='rel',index=False)
-        try:
-            for col in db.columns:
-                col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
-                col_idx = db.columns.get_loc(col)
-                writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
-                writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
-        except:
-            pass
+        for df_name in kwargs:
+            s_name = sheet_name_map[df_name]
+            df = kwargs[df_name]
+            df.to_excel(writer, sheet_name=s_name, index=False)
+            # db_rel.to_excel(writer,sheet_name='rel',index=False)
+            try:
+                for col in df.columns:
+                    col_length = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                    col_idx = df.columns.get_loc(col)
+                    writer.sheets[s_name].set_column(col_idx, col_idx, col_length)
+                    # writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
+            except:
+                pass
         # writer.save()
         writer.close()
         processed_data = output.getvalue()
@@ -86,74 +90,79 @@ def generate_excel(db, db_rel):
     # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">Download Excel databank</a>' # decode b'abc' => abc
     return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">{link_text}</a>' # decode b'abc' => abc
 
-def generate_excel_alt(db_alt):
-    # thanks to https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806/12
-    writing_excel_container = st.empty()
-    writing_excel_container.text('writing to excel')
-    output = BytesIO()
-    with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
-        db_alt.to_excel(writer, sheet_name='Sheet1' ,index=False)
-        try:
-            for col in db_alt.columns:
-                col_length = max(db_alt[col].astype(str).map(len).max(), len(col)) + 2
-                col_idx = db_alt.columns.get_loc(col)
-                writer.sheets['Sheet1'].set_column(col_idx, col_idx, col_length)
-        except:
-            pass
-        # writer.save()
-        writer.close()
-        processed_data = output.getvalue()
+# def generate_excel(db, db_rel):
+#     # thanks to https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806/12
+#     writing_excel_container = st.empty()
+#     writing_excel_container.text('writing to excel')
+#     output = BytesIO()
+#     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
+#         db.to_excel(writer,sheet_name='abs',index=False)
+#         db_rel.to_excel(writer,sheet_name='rel',index=False)
+#         try:
+#             for col in db.columns:
+#                 col_length = max(db[col].astype(str).map(len).max(), len(col)) + 2
+#                 col_idx = db.columns.get_loc(col)
+#                 writer.sheets['abs'].set_column(col_idx, col_idx, col_length)
+#                 writer.sheets['rel'].set_column(col_idx, col_idx, col_length)
+#         except:
+#             pass
+#         # writer.save()
+#         writer.close()
+#         processed_data = output.getvalue()
         
-    b64 = base64.b64encode(processed_data)
-    writing_excel_container.empty()
-    # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="Results.xlsx">Download Results as Excel File</a>' # decode b'abc' => abc
-    download_filename = 'Cyccess_Databank.xlsx'
-    link_text = 'Download databank'
-    # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">Download Excel databank</a>' # decode b'abc' => abc
-    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">{link_text}</a>' # decode b'abc' => abc
+#     b64 = base64.b64encode(processed_data)
+#     writing_excel_container.empty()
+#     # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="Results.xlsx">Download Results as Excel File</a>' # decode b'abc' => abc
+#     download_filename = 'Cyccess_Databank.xlsx'
+#     link_text = 'Download databank'
+#     # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">Download Excel databank</a>' # decode b'abc' => abc
+#     return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">{link_text}</a>' # decode b'abc' => abc
+
+# def generate_excel_alt(db_alt):
+#     # thanks to https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806/12
+#     writing_excel_container = st.empty()
+#     writing_excel_container.text('writing to excel')
+#     output = BytesIO()
+#     with pd.ExcelWriter(output, date_format='dd.mm.yyyy') as writer:
+#         db_alt.to_excel(writer, sheet_name='Sheet1' ,index=False)
+#         try:
+#             for col in db_alt.columns:
+#                 col_length = max(db_alt[col].astype(str).map(len).max(), len(col)) + 2
+#                 col_idx = db_alt.columns.get_loc(col)
+#                 writer.sheets['Sheet1'].set_column(col_idx, col_idx, col_length)
+#         except:
+#             pass
+#         # writer.save()
+#         writer.close()
+#         processed_data = output.getvalue()
+        
+#     b64 = base64.b64encode(processed_data)
+#     writing_excel_container.empty()
+#     # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="Results.xlsx">Download Results as Excel File</a>' # decode b'abc' => abc
+#     download_filename = 'Cyccess_Databank.xlsx'
+#     link_text = 'Download databank'
+#     # return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">Download Excel databank</a>' # decode b'abc' => abc
+#     return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{download_filename}">{link_text}</a>' # decode b'abc' => abc
 
 #%%
-def retrieve_saved_variables():
-    with open(os.path.join(os.getcwd(),'saved_variables','Options.json'), 'r') as fp:
-        Options = json.load(fp)
-    for (_, _, file_list) in os.walk(os.path.join(os.getcwd(),'saved_variables')):# get main path and list of directories
-        break
-    data_export_files = []
-    data_export_file_names = [x for x in file_list if '_bytesIO.txt' in x]
-    for f in data_export_file_names:
-        with open(os.path.join(os.getcwd(),'saved_variables',f), 'rb') as fh:
-            file = BytesIO(fh.read())
-            data_export_files.append(file)
-    del fp, f, fh, file, file_list#, data_export_file_names
-    return Options, data_export_files, data_export_file_names
+# def retrieve_saved_variables():
+#     with open(os.path.join(os.getcwd(),'saved_variables','Options.json'), 'r') as fp:
+#         Options = json.load(fp)
+#     for (_, _, file_list) in os.walk(os.path.join(os.getcwd(),'saved_variables')):# get main path and list of directories
+#         break
+#     data_export_files = []
+#     data_export_file_names = [x for x in file_list if '_bytesIO.txt' in x]
+#     for f in data_export_file_names:
+#         with open(os.path.join(os.getcwd(),'saved_variables',f), 'rb') as fh:
+#             file = BytesIO(fh.read())
+#             data_export_files.append(file)
+#     del fp, f, fh, file, file_list#, data_export_file_names
+#     return Options, data_export_files, data_export_file_names
 
-# Options, data_export_files, data_export_file_names = retrieve_saved_variables()
-# Options['save_variables'] = False
+# # Options, data_export_files, data_export_file_names = retrieve_saved_variables()
+# # Options['save_variables'] = False
 
-#%%
-st.write("""
-
-# Web app for transforming MLD csv-export files to excel database format
-
-""")
-st.sidebar.header('Options')
-Options = {}
-Options = {'save_variables': False}# if '/app/' in os.getcwd() else True
-Options['valid_only'] = st.sidebar.checkbox('valid trials only',
-                                            value=True,
-                                            )
-Options['alt_output'] = st.sidebar.checkbox('alternative output format',
-                                            value=False,
-                                            )
-data_export_files = st.file_uploader("upload csv export file", accept_multiple_files=True)
-current_file_container = st.empty()
-if data_export_files is not None and len(data_export_files)>0:
-    if Options['save_variables']:
-        for (path, _, files) in os.walk(os.path.join(os.getcwd(), 'saved_variables')):
-            for f in files:
-                os.remove(os.path.join(path, f))
-        with open(os.path.join(os.getcwd(), 'saved_variables','Options.json'), 'w') as fp:
-            json.dump(Options, fp)
+def process_uploaded_files(data_export_files, Options, live=True):# data_export_files, Options, live = ["C:\\Users\\user\\OneDrive\\data_transfer\\cycexport_16102024_23122024.csv"], {'valid_only': True}, False
     id_columns = get_id_columns()
     iso_columns = get_iso_columns()
     loadedjump_columns = get_loadedjump_columns()
@@ -165,11 +174,12 @@ if data_export_files is not None and len(data_export_files)>0:
     bm_dropjump = {}
     db = pd.DataFrame()
     for f_nr,f in enumerate(data_export_files):# f_nr,f = 0,data_export_files[0]
-        with current_file_container:
-            st.write(f.name)
-        if Options['save_variables']:
-            with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
-                fp.write(f.getbuffer())
+        if live:
+            with current_file_container:
+                st.write(f.name)
+        # if Options['save_variables']:
+        #     with open(os.path.join(os.getcwd(),'saved_variables','.'.join(f.name.split('.')[:-1])+'_bytesIO.txt'), 'wb') as fp:
+        #         fp.write(f.getbuffer())
         f.seek(0)
         df_file = pd.read_csv(f, sep=';', encoding='cp1252')
         ons = list(df_file['Vorname'].dropna().index) + [len(df_file)]
@@ -222,7 +232,7 @@ if data_export_files is not None and len(data_export_files)>0:
                     db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# str(db.loc[idx,'TestType']) + ', ' + test_type
                 execution_types = ['elastodyn', 'statodyn']
                 for j,jump in enumerate(['CMJ', 'SJ']):# j,jump=0,'CMJ'
-                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
+                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3', 'Fpos', 't_Fmax', 'tacc', 'tneg']:# par='Pmax'
                         for ld in [str(x) for x in [0, 20, 40, 60, 80, 100]]:# ld=str(0)
                             if '_'.join([jump,par,ld]) not in df.columns or np.isnan(db.loc[idx,'_'.join([jump,par,ld])]):# if there is already a value there from an 'Einzelsprung'
                                 db.loc[idx,'_'.join([jump,par,ld])] = df[
@@ -243,7 +253,7 @@ if data_export_files is not None and len(data_export_files)>0:
                     db.loc[idx,'TestType'] = ', '.join(sorted([str(db.loc[idx,'TestType']), test_type]))# str(db.loc[idx,'TestType']) + ', ' + test_type
                 execution_types = ['elastodyn', 'einbeinig links', 'einbeinig rechts']
                 for jump in ['CMJ']:# jump='CMJ'
-                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
+                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3', 'Fpos', 't_Fmax', 'tacc', 'tneg']:# par='Pmax'
                         for s,side in enumerate(['0', 'left','right']):# s,side = 0,'0'
                             db.loc[idx,'_'.join([jump, par, side])] = df[
                                 ((df['Ausführung']==execution_types[s]))
@@ -258,7 +268,7 @@ if data_export_files is not None and len(data_export_files)>0:
                         for par in ['Pmax', 's_max']:
                             db.loc[idx, '_'.join([jump, par, '0_LR-imbalance'])] = 100*(1 - np.min([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]])/np.max([db.loc[idx,'_'.join([jump, par, 'left'])], db.loc[idx,'_'.join([jump, par, 'right'])]]))
                 for jump in ['SJ']:# jump='CMJ'
-                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3']:# par='Pmax'
+                    for par in ['Pmax', 'Ppos', 's_max', 'load', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'P1/3', 'Fpos', 't_Fmax', 'tacc', 'tneg']:# par='Pmax'
                         for ld in ['0']:
                             db.loc[idx,'_'.join([jump, par, ld])] = df[
                                 ((df['Ausführung']=='statodyn'))
@@ -292,7 +302,7 @@ if data_export_files is not None and len(data_export_files)>0:
                                     ][
                                         [col for col in df.columns if col.startswith(par) and 'rel' not in col][0]
                                         ].max()
-                    for par in ['s_max', 'tacc']:# par = 's_max'
+                    for par in ['s_max', 'tacc', 's_pos', 'tpos', 'Fmax', 'Vmax', 'Fv0', 'Fpos', 't_Fmax', 'tacc', 'tneg']:# corresponding parameters for the trial where Reak1 was highest
                         for dh in [str(int(x)) for x in df['Automatic (112)'].dropna().unique()]:# dh = str(20)
                             # if Options['alt_output']:
                             #     # db.loc[idx,'_'.join([jump,par,dh])] = df[
@@ -389,14 +399,49 @@ if data_export_files is not None and len(data_export_files)>0:
                 'DJ_Reak2_20', 'DJ_Reak1_20', 'DJ_s_max_20', 'DJ_tacc_20',
                 ]
             ]
-        st.markdown(
-            generate_excel_alt(db_alt),
-            unsafe_allow_html=True
-            )#, sign_digits=3
+        # st.markdown(
+        #     generate_excel_alt(db_alt),
+        #     unsafe_allow_html=True
+        #     )#, sign_digits=3
+        return {'db_alt': db_alt}
     else:
+        # st.markdown(
+        #     generate_excel(db, db_rel),
+        #     unsafe_allow_html=True
+        #     )#, sign_digits=3
+        return {'db': db, 'db_rel': db_rel}
+
+#%%
+if __name__ == "__main__":
+    st.set_page_config(layout="wide")
+    st.write("""
+    
+    # Web app for transforming MLD csv-export files to excel database format
+    
+    """)
+    st.sidebar.header('Options')
+    Options = {}
+    # Options = {'save_variables': False}# if '/app/' in os.getcwd() else True
+    Options['valid_only'] = st.sidebar.checkbox('valid trials only',
+                                                value=True,
+                                                )
+    Options['alt_output'] = st.sidebar.checkbox('alternative output format',
+                                                value=False,
+                                                )
+    data_export_files = st.file_uploader("upload csv export file", accept_multiple_files=True)
+    current_file_container = st.empty()
+    if data_export_files is not None and len(data_export_files)>0:
+        # if Options['save_variables']:
+        #     for (path, _, files) in os.walk(os.path.join(os.getcwd(), 'saved_variables')):
+        #         for f in files:
+        #             os.remove(os.path.join(path, f))
+        #     with open(os.path.join(os.getcwd(), 'saved_variables','Options.json'), 'w') as fp:
+        #         json.dump(Options, fp)
         st.markdown(
-            generate_excel(db, db_rel),
+            generate_excel(
+                **process_uploaded_files(data_export_files, Options)
+                ),
             unsafe_allow_html=True
-            )#, sign_digits=3
+            )
         
 
