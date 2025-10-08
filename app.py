@@ -416,7 +416,7 @@ if __name__ == "__main__":
     st.set_page_config(layout="wide")
     st.write("""
     
-    # Web app for transforming MLD csv-export files to excel database format
+    # Web app for transforming Cyccess csv-export files to excel database format
     
     """)
     st.sidebar.header('Options')
@@ -444,5 +444,6 @@ if __name__ == "__main__":
             unsafe_allow_html=True
             )
         
+
 
 
